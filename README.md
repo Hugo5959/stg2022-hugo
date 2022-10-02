@@ -31,7 +31,7 @@ sudo apt install ${GAZ} lib${GAZ}-dev ros-${DIST}-gazebo-plugins ros-${DIST}-gaz
 cd $HOME
 mkdir -p ~/workspaceRos_VRX
 cd ~/workspaceRos_VRX
-git clone [https://bitbucket.org/imt-mobisyst/stg2022-hugo.git](https://github.com/Hugo5959/stg2022_hugo.git)
+git clone https://github.com/Hugo5959/stg2022_hugo.git
 cd $HOME/workspaceRos_VRX
 catkin_make
 source devel/setup.bash
