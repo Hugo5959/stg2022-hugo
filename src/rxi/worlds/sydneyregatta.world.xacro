@@ -1,0 +1,76 @@
+<?xml version="1.0" ?>
+<!-- attention : re build pour actualiser le world -->
+<!-- World containing only sydneyregatta model -->
+<sdf version="1.6" xmlns:xacro="http://ros.org/wiki/xacro">
+  <world name="sydneyregatta">
+      <!-- sidney -->
+    <xacro:include filename="$(find rxi)/worlds/xacros/sydneyregatta.xacro" />
+    <xacro:sydneyregatta />
+      <!-- ocean -->
+    <!-- <xacro:include filename="$(find rxi)/worlds/xacros/include_all_xacros.xacro" /> 
+    <xacro:include_all_xacros /> -->
+      <!-- archipel -->
+    <!-- <xacro:include filename="$(find rxi)/worlds/xacros/sandisland_minus_scene.xacro" /> 
+    <xacro:sandisland_minus_scene /> -->
+      <!-- ocean + dock -->
+    <!-- <xacro:include filename="$(find rxi)/worlds/xacros/scan_and_dock.xacro" /> 
+    <xacro:scan_and_dock /> -->
+
+    <!--Waves-->
+    <xacro:include filename="$(find rxi)/worlds/xacros/waves/model.xacro"/>
+    <xacro:ocean_waves gain="0"/>
+    <xacro:ocean_waves period="0"/>
+
+
+    <!--Wind for the WAM-V. Note, wind parameters are set in the plug.-->
+    <xacro:include filename="$(find rxi)/worlds/xacros/winds/usv_wind_1_plugin.xacro"/>
+    <xacro:usv_wind_gazebo var_gain="0">
+      <wind_objs>
+        <wind_obj>
+          <name>wamv</name>
+          <link_name>wamv/base_link</link_name>
+            <!-- coefs vent -->
+          <coeff_vector>0.5 0.5 0.33</coeff_vector>
+        </wind_obj>
+      </wind_objs>
+    </xacro:usv_wind_gazebo>
+
+    <!-- add buoy -->
+    <include>
+      <name>buoy_0</name>
+        <!-- plot vert -->
+      <uri>model://mb_marker_buoy_green</uri>
+        <!-- plot rouge -->
+      <!-- <uri>model://mb_marker_buoy_red</uri> -->
+        <!-- balle noir -->
+      <!-- <uri>model://polyform_a3</uri> -->
+        <!-- balle noir grosse -->
+      <!-- <uri>model://polyform_a7</uri> -->
+        <!-- bouee verte -->
+      <!-- <uri>model://surmark950400</uri> -->
+      <pose>5 20 0 0 0 0</pose>
+    </include>
+
+    <include>
+      <name>buoy_1</name>
+      <uri>model://mb_marker_buoy_red</uri>
+      <pose>20 40 0 0 0 0</pose>
+    </include>
+    <include>
+      <name>buoy_2</name>
+      <uri>model://mb_marker_buoy_red</uri>
+      <pose>35 0 0 0 0 0</pose>
+    </include>
+    <include>
+      <name>buoy_3</name>
+      <uri>model://mb_marker_buoy_red</uri>
+      <pose>-20 0 0 0 0 0</pose>
+    </include>
+    <include>
+      <name>buoy_4</name>
+      <uri>model://mb_marker_buoy_red</uri>
+      <pose>50 0 0 0 0 0</pose>
+    </include>
+
+  </world>
+</sdf>

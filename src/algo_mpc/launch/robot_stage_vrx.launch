@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+
+
+<launch>
+
+    <arg name="namespace_name" default="wamv" />
+   
+    <!-- rviz -->
+    <!-- <node type="rviz" name="rviz" pkg="rviz" /> -->
+    <!-- <node type="rviz" name="rviz" pkg="rviz" args="-d $~/workspaceRos/src/larm1_slam/rviz/config_file.rviz" /> -->
+    
+    <!-- <include file="$(find hdl_graph_slam)/rviz/hdl_graph_slam.rviz"/> -->
+
+
+    <!-- gazebo vrx -->
+    <include file="$(find rxi)/launch/rxi.launch">
+        <arg name="namespace" default="$(arg namespace_name)"/>
+    </include>
+       
+    <!-- <arg name="namespace" default="wamv"/> ??? -->
+    
+    <!-- usv wam-v -->
+    <include file="$(find rxi)/launch/rxi_wamv_boat.launch">
+        <arg name="namespace" default="$(arg namespace_name)"/>
+    </include>
+
+
+
+    <!-- airboat -->
+    <!-- <include file="$(find usv_sim)/launch/models/spawn_airboat.launch"/> -->
+        <!-- <arg name="namespace" default="wamv"/>
+    </include> -->
+
+    <!-- control keybord -->
+    <!-- <include file="$(find vrx_gazebo)/launch/usv_keydrive.launch"/> -->
+
+
+    <!-- launch slam -->
+    
+    <!-- <include file="$(find hdl_graph_slam)/launch/hdl_graph_slam_400.launch"> -->
+        <!-- <arg name="namespace" default="$(arg namespace_name)"/>
+    </include> -->
+    <node name="x_state_mpc" pkg="algo_mpc" type="x_state_mpc" output="screen" />
+
+    
+    
+    <!-- rqt -->
+    <node name="rqt_gui" pkg="rqt_gui" type="rqt_gui"/>
+
+
+</launch>

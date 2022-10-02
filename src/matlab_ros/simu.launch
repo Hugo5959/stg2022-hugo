@@ -1,0 +1,4 @@
+<launch>
+	<node name="controleur_bateau" pkg="matlab_ros" type="data_sensors" />
+	<node name="omega" pkg="matlab_ros" type="omega" />
+</launch>

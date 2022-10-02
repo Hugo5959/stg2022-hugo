@@ -1,0 +1,166 @@
+%% Importations
+
+load('Zone.mat');
+load('X_Zone_Rebuilt.mat');
+
+addpath('/home/bot/WorkspaceMatlab/matlab_node_mpc/casadi-linux-matlabR2014b-v3.5.5');
+import casadi.*;
+
+
+%% Paramètres globaux
+
+global T;                                 % Sample time pour le MPC (s)
+global N;                                 % Prediction Horizon MPC
+global x;                                 % Vecteur d'etat du robot (x,y,yaw,vx,vy,vyaw)
+global input_gauche ;                     % Commande moteur gauche
+global input_droit;                       % Commande moteur droit
+%global map;                              % Liste des targets sets (inutile dans le cas où on utilise la carte du lac)
+global cnt;                               % Compteur pour la liste des targets sets
+global Ox;                                % Taux d'oxygène
+global t;                                 % Temps (s)
+global donx;                              % Liste abscisse x
+global dony;                              % Liste abscisse y
+global donox;                             % Liste donnée oxygène
+global dont;                              % Liste des timestamp
+global Oxi;                               % Taux d'oxygène sans modification
+global donoxori;                          % Liste données oxygène origine
+
+%% Initialisation                                                         
+
+cnt = 1;
+x = [0; 0; pi/2; 0; 0; 0];               
+t = 0;
+T = 1;                                    
+N = 5;                                   
+Ox = 0;  
+Oxi = 0;
+input_droit = 0;
+input_gauche = 0;
+donx = [];
+dony = [];
+donox = [];
+dont = [];
+donoxori = [];
+%map = grille_parcours1(60,80,50,100,5);  % Choix entre grille_parcours1 (zigzag) ou grille_parcours2 (spirale);
+
+%% ROS Architecture
+
+rosshutdown;                             % Suppression du dernier node specifique matlab
+rosinit;                                 % Création du node spécifique matlab
+
+
+node1 = ros.Node('/MPC1','10.1.160.141');  % Création du node MPC qui se connecte au ros master communication avec un ROS qui tourne sur la même machine ici machine
+                                           % Il faut entrer l'adresse IP du master en paramètre
+                                        
+
+% Create ROS subscribers and publishers
+
+sub = ros.Subscriber(node1,'/vessel_state','geometry_msgs/Twist',...
+    @callback,...
+    'DataFormat','struct'); % Suscriber en callback de l'état du robot
+
+pub_left = ros.Publisher(node1,'/wamv/thrusters/left_thrust_cmd','std_msgs/Float32');       % Publisher de la commande gauche
+pub_right = ros.Publisher(node1,'/wamv/thrusters/right_thrust_cmd','std_msgs/Float32');     % Publisher de la commande droite
+pub_ox = ros.Publisher(node1,'/taux_ox','std_msgs/Float32');                                % Publisher du taux d'oxygène
+
+% Message ROS associée aux publishers
+
+msg_left = rosmessage(pub_left);
+msg_right = rosmessage(pub_right);
+msg_ox = rosmessage(pub_ox);
+
+r = rosrate(0.7);                     % Fréquence des publishers (fréquence lente conseillée pour éviter que ça plante)
+reset(r);
+
+while (1)
+
+    fprintf('Node is alive..  \n');
+    
+    % Envoi des messages
+
+    msg_left.Data = input_gauche;
+    msg_right.Data = input_droit;
+    send(pub_left,msg_left);
+    send(pub_right,msg_right);
+
+    for i=1:length(Zone) 
+
+        if isInside(Zone(i),[x(2);x(1)]) 
+            Ox = X_Zone_Rebuilt(i).Oxygene ;
+            Oxi = Ox + ((-abs( rem(t,86200)-43200 ))* (2.8/43200))+ 1.4;  % Evolution du taux d'oxygène selon l'heure de la journée (cycle de 24h, soit 86200s)
+        end
+
+    end
+
+    donoxori(end+1) = Ox;
+    donox(end + 1) = Oxi;
+    dont(end +1) = t;
+    fprintf("ox : (%f)",Ox);
+    msg_ox.Data = Ox;
+    send(pub_ox, msg_ox);
+    t = t + (1/0.7);                      % Incrémentation du temps
+    
+    waitfor(r); 
+    
+end
+
+
+%% Suscriber callback function
+
+function callback(~,state)
+
+global T;
+global x;
+global N ;                                   
+global input_gauche;
+global input_droit;
+global cnt;
+global donx;
+global dony;
+%global map;
+load('Position_sorted.mat');
+
+% Création des targets sets avec Polyhédron
+
+P = Polyhedron('lb',[-0.2 -0.2],'ub',[0.2 0.2]);          % Polyhedron pour le MPC
+Q = Polyhedron('lb',[-2.5 -2.5],'ub',[2.5 2.5]);          % Polyhedron pour la détection de zone atteinte
+
+%Omega1 = [map(cnt,1) map(cnt,2)]'+P;
+%Omega2 = [map(cnt+1,1) map(cnt+1,2)]'+P;
+%Omega3 = [map(cnt+2,1) map(cnt+2,2)]'+P;
+%Omegak = [map(cnt,1) map(cnt,2)]'+Q;
+
+Omega1 = [Position_sorted(cnt,2) Position_sorted(cnt,1)]'+P;
+%Omega2 = [Position_sorted(cnt+1,2) Position_sorted(cnt+1,1)]'+P;
+%Omega3 = [Position_sorted(cnt+2,2) Position_sorted(cnt+2,1)]'+P;
+Omegak = [Position_sorted(cnt,2)   Position_sorted(cnt,1)]'+Q;
+
+x = [state.Linear.X , state.Linear.Y , state.Linear.Z , state.Angular.X , state.Angular.Y , state.Angular.Z];
+donx(end + 1) = x(1);
+dony(end + 1) = x(2);
+
+if isInside(Omegak,[x(1);x(2)])                 % Vérification si la target set est atteinte et on passe à la suivante (avec omega k ou 1)
+    cnt = cnt + 1;
+end
+
+x = x.';
+%kappa_MPC = kappa_PROPOSED_MPC(x,Omega1,Omega2,Omega3,T,N);         % Reprend le code de l'algo MPC multi -target
+kappa_MPC = kappa(x,Omega1,T,N);                                     % MPC avec une seule target
+input_gauche = kappa_MPC(1);
+input_droit = kappa_MPC(2);
+
+if input_droit+input_gauche < 0.00001           % Permet d'éviter l'arrêt du robot quand il considère une zone inatteignable
+    input_gauche = 250;
+    input_droit = 0;    
+end
+
+fprintf("input : (%f,%f)\n",input_gauche,input_droit);
+fprintf("map = (%f,%f)\n",Position_sorted(cnt,1),Position_sorted(cnt,2));
+fprintf("cnt = (%f)\n", cnt)
+fprintf("yaw : (%f)\n",state.Linear.Z);
+fprintf("x : (%f)\n",state.Linear.X);
+fprintf("y : (%f)\n",state.Linear.Y);
+
+end
+
+
