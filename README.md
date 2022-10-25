@@ -32,7 +32,7 @@ cd $HOME
 mkdir -p ~/workspaceRos_VRX
 cd ~/workspaceRos_VRX
 git clone https://github.com/Hugo5959/stg2022-hugo.git
-cd $HOME/workspaceRos_VRX
+cd $HOME/workspaceRos_VRX/stg2022-hugo
 catkin_make
 source devel/setup.bash
 ```
